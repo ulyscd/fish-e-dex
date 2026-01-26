@@ -1,0 +1,215 @@
+.handheld-frame {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: var(--beige);
+  border: 50px solid var(--beige-dark);
+  border-radius: 0;
+  box-shadow: 
+    inset 0 0 50px rgba(0, 0, 0, 0.2),
+    inset 0 0 100px rgba(0, 0, 0, 0.15),
+    0 0 0 10px rgba(0, 0, 0, 0.3),
+    0 0 0 20px var(--beige),
+    0 30px 80px rgba(0, 0, 0, 0.5),
+    0 0 150px rgba(0, 0, 0, 0.4);
+  padding: 40px;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.5s ease;
+  box-sizing: border-box;
+  z-index: 1;
+  position: relative;
+}
+
+.handheld-frame::after {
+  content: '';
+  position: absolute;
+  top: -50px;
+  left: -50px;
+  right: -50px;
+  bottom: -50px;
+  border: 8px solid rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+  z-index: -1;
+}
+
+.handheld-frame::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: url('/media/water 2.gif');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  opacity: 0;
+  pointer-events: none;
+  z-index: -1;
+  transition: opacity 0.5s ease;
+}
+
+.handheld-frame:hover::before {
+  opacity: 0.2;
+}
+
+.frame-embossed {
+  position: absolute;
+  top: 15px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.7rem;
+  color: var(--beige-dark);
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  opacity: 0.4;
+  text-shadow: 
+    1px 1px 0 rgba(255, 255, 255, 0.5),
+    -1px -1px 0 rgba(0, 0, 0, 0.2);
+  pointer-events: none;
+  z-index: 10;
+}
+
+.screen-container {
+  flex: 1;
+  background: var(--text-dark);
+  border: 8px solid var(--beige-dark);
+  border-radius: 0;
+  padding: 20px;
+  box-shadow: 
+    inset 0 0 50px rgba(0, 0, 0, 0.7),
+    inset 0 0 100px rgba(0, 0, 0, 0.4),
+    inset 0 0 150px rgba(0, 0, 0, 0.2),
+    0 6px 30px rgba(0, 0, 0, 0.6),
+    inset 0 0 0 4px rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+  position: relative;
+}
+
+.screen-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    rgba(18, 16, 16, 0.1) 50%,
+    rgba(0, 0, 0, 0.25) 50%
+  ),
+  linear-gradient(
+    90deg,
+    rgba(255, 0, 0, 0.06),
+    rgba(0, 255, 0, 0.02),
+    rgba(0, 0, 255, 0.06)
+  );
+  background-size: 100% 2px, 3px 100%;
+  pointer-events: none;
+  z-index: 1;
+  animation: flicker 0.15s infinite;
+}
+
+@keyframes flicker {
+  0% {
+    opacity: 0.18382489;
+  }
+  5% {
+    opacity: 0.34270544;
+  }
+  10% {
+    opacity: 0.96586561;
+  }
+  15% {
+    opacity: 0.72077474;
+  }
+  20% {
+    opacity: 0.2364895;
+  }
+  25% {
+    opacity: 0.70936118;
+  }
+  30% {
+    opacity: 0.00409007;
+  }
+  35% {
+    opacity: 0.65961344;
+  }
+  40% {
+    opacity: 0.50734813;
+  }
+  45% {
+    opacity: 0.88146788;
+  }
+  50% {
+    opacity: 0.0465525;
+  }
+  55% {
+    opacity: 0.33315262;
+  }
+  60% {
+    opacity: 0.36203894;
+  }
+  65% {
+    opacity: 0.68575812;
+  }
+  70% {
+    opacity: 0.77522172;
+  }
+  75% {
+    opacity: 0.75757868;
+  }
+  80% {
+    opacity: 0.60799146;
+  }
+  85% {
+    opacity: 0.77076662;
+  }
+  90% {
+    opacity: 0.90846953;
+  }
+  95% {
+    opacity: 0.02312783;
+  }
+  100% {
+    opacity: 0.15431698;
+  }
+}
+
+.screen {
+  width: 100%;
+  height: 100%;
+  background: var(--off-white);
+  border-radius: 0;
+  position: relative;
+  overflow: hidden;
+  z-index: 2;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .handheld-frame {
+    padding: 25px;
+    border-width: 30px;
+  }
+  
+  .handheld-frame::after {
+    border-width: 6px;
+    top: -30px;
+    left: -30px;
+    right: -30px;
+    bottom: -30px;
+  }
+  
+  .frame-embossed {
+    font-size: 0.5rem;
+    top: 10px;
+  }
+  
+  .screen-container {
+    padding: 12px;
+    border-width: 5px;
+  }
+}
