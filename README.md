@@ -1,6 +1,6 @@
-# Fish-e-dex
+# Fish-E-Dex
 
-A retro-styled fishing journal web application for logging fishing outings, locations, catches, and insights.
+A Poke-e-dex Fishing Journal Web App built in React.
 
 ## Features
 
