@@ -5,15 +5,6 @@
   width: 100vw;
   height: 100vh;
   background: var(--beige);
-  border: 50px solid var(--beige-dark);
-  border-radius: 0;
-  box-shadow: 
-    inset 0 0 50px rgba(0, 0, 0, 0.2),
-    inset 0 0 100px rgba(0, 0, 0, 0.15),
-    0 0 0 10px rgba(0, 0, 0, 0.3),
-    0 0 0 20px var(--beige),
-    0 30px 80px rgba(0, 0, 0, 0.5),
-    0 0 150px rgba(0, 0, 0, 0.4);
   padding: 40px;
   display: flex;
   flex-direction: column;
@@ -23,16 +14,16 @@
   position: relative;
 }
 
-.handheld-frame::after {
-  content: '';
+.tube-border {
+  width: 100%;
+  height: 100%;
+  background-image: url('/media/border.png');
+  background-size: 100% 100%;
   position: absolute;
-  top: -50px;
-  left: -50px;
-  right: -50px;
-  bottom: -50px;
-  border: 8px solid rgba(0, 0, 0, 0.4);
+  z-index: 10;
+  top: 0;
+  left: 0;
   pointer-events: none;
-  z-index: -1;
 }
 
 .handheld-frame::before {
@@ -58,19 +49,31 @@
 
 .frame-embossed {
   position: absolute;
-  top: 15px;
+  bottom: 40px;
   left: 50%;
   transform: translateX(-50%);
   font-size: 0.7rem;
   color: var(--beige-dark);
   text-transform: uppercase;
   letter-spacing: 3px;
-  opacity: 0.4;
+  opacity: 0.6;
   text-shadow: 
-    1px 1px 0 rgba(255, 255, 255, 0.5),
-    -1px -1px 0 rgba(0, 0, 0, 0.2);
-  pointer-events: none;
+    2px 2px 0 rgba(0, 0, 0, 0.8),
+    3px 3px 4px rgba(0, 0, 0, 0.6),
+    0 0 10px rgba(0, 0, 0, 0.4);
+  pointer-events: auto;
   z-index: 10;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.frame-embossed:hover {
+  opacity: 0.9;
+  transform: translateX(-50%) scale(1.05);
+  text-shadow: 
+    3px 3px 0 rgba(0, 0, 0, 0.9),
+    4px 4px 6px rgba(0, 0, 0, 0.7),
+    0 0 15px rgba(0, 0, 0, 0.5);
 }
 
 .screen-container {
@@ -192,20 +195,11 @@
 @media (max-width: 768px) {
   .handheld-frame {
     padding: 25px;
-    border-width: 30px;
-  }
-  
-  .handheld-frame::after {
-    border-width: 6px;
-    top: -30px;
-    left: -30px;
-    right: -30px;
-    bottom: -30px;
   }
   
   .frame-embossed {
     font-size: 0.5rem;
-    top: 10px;
+    bottom: 30px;
   }
   
   .screen-container {

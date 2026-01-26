@@ -43,7 +43,7 @@ function App() {
 
   return (
     <div className="app">
-      <HandheldFrame>
+      <HandheldFrame onTitleClick={() => setCurrentView('welcome')}>
         {currentView === 'welcome' && (
           <WelcomeScreen onStart={() => setCurrentView('main')} />
         )}
