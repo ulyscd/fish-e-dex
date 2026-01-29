@@ -458,7 +458,24 @@ app.get("/catch_images/:catch_id", (req, res) => {
   );
 });
 
-// get catch image by image_id (returns image data as base64 or URL)
+// serve catch image as binary (for <img src=""> display)
+app.get("/catch_images/image/:image_id/file", (req, res) => {
+  db.query(
+    "SELECT image_data, image_type FROM catch_images WHERE image_id = ?",
+    [req.params.image_id],
+    (err, results) => {
+      if (err) return res.status(500).json({ error: err.message });
+      if (results.length === 0) return res.status(404).json({ error: "Image not found" });
+      const row = results[0];
+      if (!row.image_data) return res.status(404).json({ error: "Image data not found" });
+      const contentType = row.image_type || "image/jpeg";
+      res.set("Content-Type", contentType);
+      res.send(row.image_data);
+    }
+  );
+});
+
+// get catch image by image_id (returns image metadata + base64 for legacy)
 app.get("/catch_images/image/:image_id", (req, res) => {
   db.query(
     "SELECT image_id, catch_id, image_url, image_data, image_type, caption FROM catch_images WHERE image_id = ?",
@@ -469,7 +486,6 @@ app.get("/catch_images/image/:image_id", (req, res) => {
       
       const image = results[0];
       if (image.image_data) {
-        // Return image as base64
         const base64 = image.image_data.toString('base64');
         res.json({
           image_id: image.image_id,
@@ -538,6 +554,23 @@ app.get("/scenery_images/:outing_id", (req, res) => {
 });
 
 // get scenery image by image_id (returns image data as base64 or URL)
+// serve scenery image as binary (for <img src=""> display)
+app.get("/scenery_images/image/:image_id/file", (req, res) => {
+  db.query(
+    "SELECT image_data, image_type FROM scenery_images WHERE image_id = ?",
+    [req.params.image_id],
+    (err, results) => {
+      if (err) return res.status(500).json({ error: err.message });
+      if (results.length === 0) return res.status(404).json({ error: "Image not found" });
+      const row = results[0];
+      if (!row.image_data) return res.status(404).json({ error: "Image data not found" });
+      const contentType = row.image_type || "image/jpeg";
+      res.set("Content-Type", contentType);
+      res.send(row.image_data);
+    }
+  );
+});
+
 app.get("/scenery_images/image/:image_id", (req, res) => {
   db.query(
     "SELECT image_id, outing_id, image_url, image_data, image_type, caption FROM scenery_images WHERE image_id = ?",
@@ -548,7 +581,6 @@ app.get("/scenery_images/image/:image_id", (req, res) => {
       
       const image = results[0];
       if (image.image_data) {
-        // Return image as base64
         const base64 = image.image_data.toString('base64');
         res.json({
           image_id: image.image_id,

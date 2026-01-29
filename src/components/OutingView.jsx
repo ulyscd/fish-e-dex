@@ -16,8 +16,9 @@ function OutingView({ onBack }) {
     field_notes: '',
     mvp_lure: ''
   })
-  const [catches, setCatches] = useState([{ species: '', count: 1, notes: '' }])
+  const [catches, setCatches] = useState([{ species: '', count: 1, notes: '', _localId: `catch-${Date.now()}` }])
   const [showCatches, setShowCatches] = useState(false)
+  const [pendingCatchImages, setPendingCatchImages] = useState({}) // { [catchLocalId]: [{ file, caption }] }
   const [showImagePopup, setShowImagePopup] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -41,29 +42,34 @@ function OutingView({ onBack }) {
     setLoading(true)
 
     try {
-      // Create outing
       const outingResponse = await axios.post(`${API_BASE}/outings`, {
         ...formData,
         location_id: formData.location_id || null
       })
       const outingId = outingResponse.data.outing_id
 
-      // Create catches
-      const catchIds = []
       for (const catchItem of catches) {
-        if (catchItem.species) {
-          const catchResponse = await axios.post(`${API_BASE}/catches`, {
-            outing_id: outingId,
-            species: catchItem.species,
-            count: catchItem.count || 1,
-            notes: catchItem.notes || null
+        if (!catchItem.species) continue
+        const catchResponse = await axios.post(`${API_BASE}/catches`, {
+          outing_id: outingId,
+          species: catchItem.species,
+          count: catchItem.count || 1,
+          notes: catchItem.notes || null
+        })
+        const catchId = catchResponse.data.catch_id
+        const pending = pendingCatchImages[catchItem._localId] || []
+        for (const { file, caption } of pending) {
+          const formDataImg = new FormData()
+          formDataImg.append('image', file)
+          formDataImg.append('catch_id', catchId)
+          if (caption) formDataImg.append('caption', caption)
+          await axios.post(`${API_BASE}/catch_images`, formDataImg, {
+            headers: { 'Content-Type': 'multipart/form-data' }
           })
-          catchIds.push(catchResponse.data.catch_id)
         }
       }
 
       setShowSuccess(true)
-      // Reset form
       setFormData({
         user_id: 1,
         location_id: '',
@@ -72,8 +78,9 @@ function OutingView({ onBack }) {
         field_notes: '',
         mvp_lure: ''
       })
-      setCatches([{ species: '', count: 1, notes: '' }])
+      setCatches([{ species: '', count: 1, notes: '', _localId: `catch-${Date.now()}` }])
       setShowCatches(false)
+      setPendingCatchImages({})
     } catch (error) {
       console.error('Error creating outing:', error)
       alert('Failed to create outing: ' + (error.response?.data?.error || error.message))
@@ -97,18 +104,56 @@ function OutingView({ onBack }) {
   }
 
   const addCatch = () => {
-    setCatches([...catches, { species: '', count: 1, notes: '' }])
+    setCatches([...catches, { species: '', count: 1, notes: '', _localId: `catch-${Date.now()}` }])
   }
 
   const handleCaughtSomething = () => {
     setShowCatches(true)
     if (catches.length === 0) {
-      setCatches([{ species: '', count: 1, notes: '' }])
+      setCatches([{ species: '', count: 1, notes: '', _localId: `catch-${Date.now()}` }])
     }
   }
 
+  const handleNoCatches = () => {
+    setShowCatches(false)
+    setCatches([{ species: '', count: 1, notes: '', _localId: `catch-${Date.now()}` }])
+    setPendingCatchImages({})
+  }
+
   const removeCatch = (index) => {
-    setCatches(catches.filter((_, i) => i !== index))
+    const next = catches.filter((_, i) => i !== index)
+    if (next.length === 0) {
+      setShowCatches(false)
+      setCatches([{ species: '', count: 1, notes: '', _localId: `catch-${Date.now()}` }])
+      setPendingCatchImages({})
+    } else {
+      const removedId = catches[index]._localId
+      setCatches(next)
+      setPendingCatchImages(prev => {
+        const nextPending = { ...prev }
+        delete nextPending[removedId]
+        return nextPending
+      })
+    }
+  }
+
+  const savePendingImage = (catchLocalId, file, caption) => {
+    setPendingCatchImages(prev => ({
+      ...prev,
+      [catchLocalId]: [...(prev[catchLocalId] || []), { file, caption: caption || '' }]
+    }))
+  }
+
+  const removePendingImage = (catchLocalId, imageIndex) => {
+    setPendingCatchImages(prev => {
+      const list = (prev[catchLocalId] || []).filter((_, i) => i !== imageIndex)
+      if (list.length === 0) {
+        const next = { ...prev }
+        delete next[catchLocalId]
+        return next
+      }
+      return { ...prev, [catchLocalId]: list }
+    })
   }
 
   const openImageUpload = (catchIndex) => {
@@ -221,13 +266,18 @@ function OutingView({ onBack }) {
         <div className="catches-section">
           <div className="section-header">
             <h3>Catches</h3>
-            <button type="button" onClick={addCatch} className="add-button">
-              + Add Catch
-            </button>
+            <div className="section-header-actions">
+              <button type="button" onClick={addCatch} className="add-button">
+                + Add Catch
+              </button>
+              <button type="button" onClick={handleNoCatches} className="no-catches-button">
+                I didn&apos;t catch anything
+              </button>
+            </div>
           </div>
 
           {catches.map((catchItem, index) => (
-            <div key={index} className="catch-item">
+            <div key={catchItem._localId} className="catch-item">
               <div className="form-row">
                 <div className="form-group">
                   <label>Species *</label>
@@ -263,20 +313,31 @@ function OutingView({ onBack }) {
                   type="button"
                   onClick={() => openImageUpload(index)}
                   className="image-button"
-                  title="Note: Save outing first, then add photos to catches"
+                  title="Add photo (saved with outing)"
                 >
                   📷 Add Photo
+                  {(pendingCatchImages[catchItem._localId]?.length || 0) > 0 && (
+                    <span className="pending-count"> ({pendingCatchImages[catchItem._localId].length})</span>
+                  )}
                 </button>
-                {catches.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => removeCatch(index)}
-                    className="remove-button"
-                  >
-                    Remove
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={() => removeCatch(index)}
+                  className="remove-button"
+                >
+                  Remove catch
+                </button>
               </div>
+              {(pendingCatchImages[catchItem._localId]?.length || 0) > 0 && (
+                <div className="pending-images">
+                  {pendingCatchImages[catchItem._localId].map((item, imgIdx) => (
+                    <span key={imgIdx} className="pending-thumb">
+                      📷
+                      <button type="button" onClick={() => removePendingImage(catchItem._localId, imgIdx)} className="remove-pending" aria-label="Remove photo">×</button>
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -292,14 +353,16 @@ function OutingView({ onBack }) {
         <OutingBrowser />
       )}
 
-      {showImagePopup && (
+      {showImagePopup && selectedCatchIndex !== null && (
         <ImageUploadPopup
           onClose={() => {
             setShowImagePopup(false)
             setSelectedCatchIndex(null)
           }}
           catchIndex={selectedCatchIndex}
-          catchId={null} // Would need to be passed from parent after catch is created
+          catchId={null}
+          catchLocalId={catches[selectedCatchIndex]?._localId}
+          onSavePending={savePendingImage}
         />
       )}
 
@@ -724,13 +787,11 @@ function OutingBrowser() {
                                 {img.image_url ? (
                                   <img src={img.image_url} alt={img.caption || 'Scenery'} />
                                 ) : (
-                                  <a
-                                    href={`${API_BASE}/scenery_images/image/${img.image_id}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                  >
-                                    View Image
-                                  </a>
+                                  <img
+                                    src={`${API_BASE}/scenery_images/image/${img.image_id}/file`}
+                                    alt={img.caption || 'Scenery'}
+                                    className="catch-photo-img"
+                                  />
                                 )}
                                 {img.caption && <p className="image-caption">{img.caption}</p>}
                               </div>
@@ -748,13 +809,11 @@ function OutingBrowser() {
                                 {img.image_url ? (
                                   <img src={img.image_url} alt={img.caption || 'Catch'} />
                                 ) : (
-                                  <a
-                                    href={`${API_BASE}/catch_images/image/${img.image_id}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                  >
-                                    View Image
-                                  </a>
+                                  <img
+                                    src={`${API_BASE}/catch_images/image/${img.image_id}/file`}
+                                    alt={img.caption || 'Catch'}
+                                    className="catch-photo-img"
+                                  />
                                 )}
                                 {img.caption && <p className="image-caption">{img.caption}</p>}
                               </div>
@@ -776,11 +835,13 @@ function OutingBrowser() {
   )
 }
 
-function ImageUploadPopup({ onClose, catchIndex, catchId }) {
+function ImageUploadPopup({ onClose, catchIndex, catchId, catchLocalId, onSavePending }) {
   const [file, setFile] = useState(null)
   const [preview, setPreview] = useState(null)
   const [uploading, setUploading] = useState(false)
   const [caption, setCaption] = useState('')
+
+  const isPendingMode = !catchId && onSavePending && catchLocalId
 
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0]
@@ -817,8 +878,13 @@ function ImageUploadPopup({ onClose, catchIndex, catchId }) {
       return
     }
 
+    if (isPendingMode) {
+      onSavePending(catchLocalId, file, caption)
+      onClose()
+      return
+    }
+
     if (!catchId) {
-      alert('Please save the catch first before uploading images')
       onClose()
       return
     }
@@ -848,7 +914,7 @@ function ImageUploadPopup({ onClose, catchIndex, catchId }) {
     <Popup onClose={onClose}>
       <div className="image-upload-popup">
         <img src="/media/rotate2.gif" alt="Upload" className="upload-gif" />
-        <h3>Upload Image</h3>
+        <h3>{isPendingMode ? 'Add photo (saved with outing)' : 'Upload Image'}</h3>
         <div
           className="drop-zone"
           onDrop={handleDrop}
@@ -885,7 +951,7 @@ function ImageUploadPopup({ onClose, catchIndex, catchId }) {
               />
             </div>
             <button onClick={handleUpload} disabled={uploading} className="upload-button">
-              {uploading ? 'Uploading...' : 'Upload'}
+              {uploading ? 'Uploading...' : isPendingMode ? 'Add photo' : 'Upload'}
             </button>
           </>
         )}
