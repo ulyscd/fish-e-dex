@@ -37,45 +37,16 @@ db.connect(err => {
 
 /* ---------------------------- Helper Functions ---------------------------- */
 
-// Geocode an address/place name to get latitude and longitude
-// Uses OpenStreetMap Nominatim (free, no API key required)
-async function geocodeLocation(locationName, region = null, pinpoint = null) {
-  try {
-    // Build search query from available location data
-    let searchQuery = '';
-    if (pinpoint) {
-      // If pinpoint is provided, use it (could be address, coordinates, or maps URL)
-      searchQuery = pinpoint;
-    } else if (region && locationName) {
-      // Combine location name and region
-      searchQuery = `${locationName}, ${region}`;
-    } else if (locationName) {
-      searchQuery = locationName;
-    } else {
-      return null;
-    }
-
-    // Use Nominatim geocoding API (free, no API key needed)
-    const geocodeUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&limit=1`;
-    
-    const response = await axios.get(geocodeUrl, {
-      headers: {
-        'User-Agent': 'Fish-e-dex App' // Required by Nominatim
-      }
-    });
-
-    if (response.data && response.data.length > 0) {
-      const result = response.data[0];
-      return {
-        latitude: parseFloat(result.lat),
-        longitude: parseFloat(result.lon)
-      };
-    }
-    return null;
-  } catch (error) {
-    console.error('Geocoding error:', error.message);
-    return null;
-  }
+// Parse coordinates from pinpoint field (lat,lng format only)
+function parseCoordinates(pinpoint) {
+  if (!pinpoint || typeof pinpoint !== 'string') return null;
+  const trimmed = pinpoint.trim();
+  const match = trimmed.match(/^(-?\d+\.?\d*)\s*,\s*(-?\d+\.?\d*)$/);
+  if (!match) return null;
+  const lat = parseFloat(match[1]);
+  const lng = parseFloat(match[2]);
+  if (isNaN(lat) || isNaN(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
+  return { latitude: lat, longitude: lng };
 }
 
 // Convert Open-Meteo weather code to condition string
@@ -127,43 +98,35 @@ app.get("/users", (req, res) => {
 /* -------------------------------- Locations ------------------------------- */
 
 // new location.
-app.post("/location", async (req, res) => {
+app.post("/location", (req, res) => {
     const { location_name, region, pinpoint, is_secret, lore } = req.body;
     if (!location_name) {
         return res.status(400).json({ error: "Must name the spot" });
     }
 
-    // Automatically geocode from location name/region/pinpoint
-    // Latitude/longitude are now fully automatic - no manual input needed
-    let finalLat = null;
-    let finalLon = null;
-    
-    const geocoded = await geocodeLocation(location_name, region, pinpoint);
-    if (geocoded) {
-        finalLat = geocoded.latitude;
-        finalLon = geocoded.longitude;
-    }
+    const coords = parseCoordinates(pinpoint);
+    const finalLat = coords ? coords.latitude : null;
+    const finalLon = coords ? coords.longitude : null;
 
     const sql = `INSERT INTO locations (location_name, region, pinpoint, latitude, longitude, is_secret, lore)
     VALUES (?, ?, ?, ?, ?, ?, ?)`;
 
     db.query(sql, [
-        location_name, 
-        region, 
-        pinpoint, 
-        finalLat || null, 
-        finalLon || null, 
-        !!is_secret, 
+        location_name,
+        region,
+        pinpoint,
+        finalLat,
+        finalLon,
+        !!is_secret,
         lore
     ], (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
-        res.status(201).json({ 
+        res.status(201).json({
             message: "Location created",
             location_id: results.insertId,
             latitude: finalLat,
-            longitude: finalLon,
-            geocoded: finalLat && finalLon // Indicate if coordinates were successfully geocoded
-         });
+            longitude: finalLon
+        });
     });
 });
 
@@ -190,48 +153,31 @@ app.get("/locations/:id", (req, res) => {
 });
 
 // update location by id.
-app.put("/locations/:id", async (req, res) => {
+app.put("/locations/:id", (req, res) => {
   const { location_name, region, pinpoint, is_secret, lore } = req.body;
   if (!location_name) {
     return res.status(400).json({ error: "Location name is required" });
   }
 
-  // Automatically geocode from location name/region/pinpoint
-  // Latitude/longitude are now fully automatic - no manual input needed
-  let finalLat = null;
-  let finalLon = null;
-  
-  const geocoded = await geocodeLocation(location_name, region, pinpoint);
-  if (geocoded) {
-    finalLat = geocoded.latitude;
-    finalLon = geocoded.longitude;
-  }
+  const coords = parseCoordinates(pinpoint);
+  const finalLat = coords ? coords.latitude : null;
+  const finalLon = coords ? coords.longitude : null;
 
-  const sql = 
-    `UPDATE locations
+  const sql = `UPDATE locations
     SET location_name = ?, region = ?, pinpoint = ?, latitude = ?, longitude = ?, is_secret = ?, lore = ?
     WHERE location_id = ?`;
 
   db.query(
-    sql, [
-      location_name, 
-      region, 
-      pinpoint, 
-      finalLat || null, 
-      finalLon || null, 
-      !!is_secret, 
-      lore, 
-      req.params.id
-    ],
+    sql,
+    [location_name, region, pinpoint, finalLat, finalLon, !!is_secret, lore, req.params.id],
     (err, result) => {
       if (err) return res.status(500).json({ error: err.message });
       if (result.affectedRows === 0)
         return res.status(404).json({ error: "Location not found" });
-      res.json({ 
+      res.json({
         message: "Location updated",
         latitude: finalLat,
-        longitude: finalLon,
-        geocoded: finalLat && finalLon
+        longitude: finalLon
       });
     }
   );
@@ -239,14 +185,46 @@ app.put("/locations/:id", async (req, res) => {
 
 // delete location by id.
 app.delete("/locations/:id", (req, res) => {
+  const locationId = req.params.id;
+  
+  // First, set location_id to NULL in outings to avoid foreign key constraint
   db.query(
-    "DELETE FROM locations WHERE location_id = ?",
-    [req.params.id],
-    (err, result) => {
-      if (err) return res.status(500).json({ error: err.message });
-      if (result.affectedRows === 0)
-        return res.status(404).json({ error: "Location not found" });
-      res.json({ message: "Location deleted" });
+    "UPDATE outings SET location_id = NULL WHERE location_id = ?",
+    [locationId],
+    (err, updateResult) => {
+      if (err) {
+        console.error('Error updating outings:', err);
+        return res.status(500).json({ error: err.message, details: err.sqlMessage });
+      }
+      
+      // Delete location images
+      db.query(
+        "DELETE FROM location_images WHERE location_id = ?",
+        [locationId],
+        (err, imageResult) => {
+          if (err) {
+            console.error('Error deleting location images:', err);
+            return res.status(500).json({ error: err.message, details: err.sqlMessage });
+          }
+          
+          // Now delete the location
+          db.query(
+            "DELETE FROM locations WHERE location_id = ?",
+            [locationId],
+            (err, result) => {
+              if (err) {
+                console.error('Error deleting location:', err);
+                console.error('SQL Error Code:', err.code);
+                console.error('SQL Error Message:', err.sqlMessage);
+                return res.status(500).json({ error: err.message, details: err.sqlMessage, code: err.code });
+              }
+              if (result.affectedRows === 0)
+                return res.status(404).json({ error: "Location not found" });
+              res.json({ message: "Location deleted" });
+            }
+          );
+        }
+      );
     }
   );
 });
@@ -363,16 +341,75 @@ app.put("/outings/:id", (req, res) => {
 
 // delete outing by id.
 app.delete("/outings/:id", (req, res) => {
-  db.query(
-    "DELETE FROM outings WHERE outing_id = ?",
-    [req.params.id],
-    (err, result) => {
-      if (err) return res.status(500).json({ error: err.message });
-      if (result.affectedRows === 0)
-        return res.status(404).json({ error: "Outing not found" });
-      res.json({ message: "Outing deleted" });
+  const outingId = req.params.id;
+  
+  // Use a transaction-like approach: disable foreign key checks temporarily
+  // This ensures we can delete in any order
+  db.query("SET FOREIGN_KEY_CHECKS = 0", (err) => {
+    if (err) {
+      console.error('Error disabling foreign key checks:', err);
+      return res.status(500).json({ error: err.message });
     }
-  );
+    
+    // Delete all related records
+    const queries = [
+      // Delete catch images (need catch_ids first)
+      (callback) => {
+        db.query("SELECT catch_id FROM catches WHERE outing_id = ?", [outingId], (err, results) => {
+          if (err) return callback(err);
+          const catchIds = results.map(r => r.catch_id);
+          if (catchIds.length === 0) return callback(null);
+          
+          const placeholders = catchIds.map(() => '?').join(',');
+          db.query(`DELETE FROM catch_images WHERE catch_id IN (${placeholders})`, catchIds, callback);
+        });
+      },
+      // Delete catches
+      (callback) => {
+        db.query("DELETE FROM catches WHERE outing_id = ?", [outingId], callback);
+      },
+      // Delete scenery images
+      (callback) => {
+        db.query("DELETE FROM scenery_images WHERE outing_id = ?", [outingId], callback);
+      },
+      // Delete the outing
+      (callback) => {
+        db.query("DELETE FROM outings WHERE outing_id = ?", [outingId], callback);
+      }
+    ];
+    
+    // Execute queries sequentially
+    let index = 0;
+    const runNext = (err) => {
+      if (err) {
+        // Re-enable foreign key checks even on error
+        db.query("SET FOREIGN_KEY_CHECKS = 1", () => {});
+        console.error(`[DELETE OUTING ${outingId}] Error at step ${index}:`, err);
+        return res.status(500).json({ error: err.message, details: err.sqlMessage });
+      }
+      
+      if (index >= queries.length) {
+        // All queries completed, re-enable foreign key checks
+        db.query("SET FOREIGN_KEY_CHECKS = 1", (fkErr) => {
+          if (fkErr) {
+            console.error('Error re-enabling foreign key checks:', fkErr);
+          }
+          res.json({ message: "Outing deleted" });
+        });
+        return;
+      }
+      
+      queries[index]((queryErr, result) => {
+        if (queryErr) {
+          return runNext(queryErr);
+        }
+        index++;
+        runNext(null);
+      });
+    };
+    
+    runNext(null);
+  });
 });
 
  /* ---------------------------- Catches and Pics ---------------------------- */
@@ -689,14 +726,13 @@ app.get("/best_spots", (req, res) => {
 
 /* ---------------------------- Weather API Endpoints ---------------------------- */
 
-// Fetch weather data for an outing (requires date and location with GPS coordinates or geocodable address)
+// Fetch weather for an outing (on demand; requires date and location with coordinates)
 app.get("/outings/:id/weather", async (req, res) => {
   const outingId = req.params.id;
   
-  // Get outing with location data
   const sql = `
-    SELECT o.outing_id, o.outing_date, 
-           l.location_id, l.location_name, l.region, l.pinpoint, l.latitude, l.longitude
+    SELECT o.outing_id, o.outing_date,
+           l.location_id, l.pinpoint, l.latitude, l.longitude
     FROM outings o
     LEFT JOIN locations l ON o.location_id = l.location_id
     WHERE o.outing_id = ?
@@ -708,189 +744,120 @@ app.get("/outings/:id/weather", async (req, res) => {
     
     const outing = results[0];
     
-    // Check if weather data already exists
-    db.query("SELECT * FROM weather_data WHERE outing_id = ?", [outingId], async (err, weatherResults) => {
-      if (err) return res.status(500).json({ error: err.message });
-      
-      // Return cached weather if exists
-      if (weatherResults.length > 0) {
-        return res.json(weatherResults[0]);
+    if (!outing.outing_date) {
+      return res.status(400).json({ error: "Cannot fetch weather: outing must have a date" });
+    }
+    
+    if (!outing.location_id) {
+      return res.status(400).json({
+        error: "Cannot fetch weather: outing must have a location. Add a location with coordinates (lat,lng)."
+      });
+    }
+    
+    let latitude = outing.latitude != null ? Number(outing.latitude) : null;
+    let longitude = outing.longitude != null ? Number(outing.longitude) : null;
+    if ((latitude == null || longitude == null) && outing.pinpoint) {
+      const coords = parseCoordinates(outing.pinpoint);
+      if (coords) {
+        latitude = coords.latitude;
+        longitude = coords.longitude;
       }
+    }
+    if (latitude == null || longitude == null) {
+      return res.status(400).json({
+        error: "Cannot fetch weather: location must have coordinates. Add coordinates (lat,lng) for this spot."
+      });
+    }
+    
+    // Ensure YYYY-MM-DD for Open-Meteo
+    const dateObj = outing.outing_date instanceof Date ? outing.outing_date : new Date(outing.outing_date);
+    const dateStr = dateObj.toISOString().slice(0, 10);
+    
+    try {
+      const apiKey = process.env.WEATHER_API_KEY;
+      let weather;
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const outingDate = new Date(dateStr);
+      outingDate.setHours(0, 0, 0, 0);
+      const isHistorical = outingDate < today;
       
-      // Check if we have required data (date)
-      if (!outing.outing_date) {
-        return res.status(400).json({ 
-          error: "Cannot fetch weather: outing must have a date" 
-        });
-      }
-      
-      // Get GPS coordinates - use existing or geocode if needed
-      let latitude = outing.latitude;
-      let longitude = outing.longitude;
-      
-      // If no coordinates, try to geocode from location data
-      if (!latitude || !longitude) {
-        if (!outing.location_id) {
-          return res.status(400).json({ 
-            error: "Cannot fetch weather: outing must have a location with GPS coordinates or an address that can be geocoded" 
-          });
-        }
+      if (isHistorical) {
+        const weatherUrl = `https://archive-api.open-meteo.com/v1/archive?latitude=${latitude}&longitude=${longitude}&start_date=${dateStr}&end_date=${dateStr}&daily=temperature_2m_max,temperature_2m_min,weathercode,precipitation_sum,windspeed_10m_max&timezone=auto&temperature_unit=fahrenheit&windspeed_unit=mph&precipitation_unit=inch`;
+        const weatherResponse = await axios.get(weatherUrl);
+        const data = weatherResponse.data;
         
-        const geocoded = await geocodeLocation(outing.location_name, outing.region, outing.pinpoint);
-        if (!geocoded) {
-          return res.status(400).json({ 
-            error: "Cannot fetch weather: unable to determine GPS coordinates for location. Please add latitude/longitude or a valid address." 
-          });
-        }
-        
-        latitude = geocoded.latitude;
-        longitude = geocoded.longitude;
-        
-        // Optionally update the location with geocoded coordinates for future use
-        if (outing.location_id) {
-          db.query(
-            "UPDATE locations SET latitude = ?, longitude = ? WHERE location_id = ?",
-            [latitude, longitude, outing.location_id],
-            (err) => {
-              if (err) console.error('Error updating location coordinates:', err);
-            }
-          );
-        }
-      }
-      
-      // Fetch weather from external API
-      // Using Open-Meteo for historical weather (free, no API key required)
-      // Falls back to OpenWeatherMap if WEATHER_API_KEY is set
-      try {
-        const apiKey = process.env.WEATHER_API_KEY;
-        let weather;
-        
-        // Check if we need historical weather (outing date is in the past)
-        const outingDate = new Date(outing.outing_date);
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const isHistorical = outingDate < today;
-        
-        if (isHistorical) {
-          // Use Open-Meteo for historical weather (free, no API key)
-          const dateStr = outing.outing_date; // Format: YYYY-MM-DD
-          const weatherUrl = `https://archive-api.open-meteo.com/v1/archive?latitude=${latitude}&longitude=${longitude}&start_date=${dateStr}&end_date=${dateStr}&daily=temperature_2m_max,temperature_2m_min,weathercode,precipitation_sum,windspeed_10m_max&timezone=auto&temperature_unit=fahrenheit&windspeed_unit=mph&precipitation_unit=inch`;
-          
-          const weatherResponse = await axios.get(weatherUrl);
-          const data = weatherResponse.data;
-          
-          if (data.daily && data.daily.time && data.daily.time.length > 0) {
-            weather = {
-              main: {
-                temp: (data.daily.temperature_2m_max[0] + data.daily.temperature_2m_min[0]) / 2,
-                temp_max: data.daily.temperature_2m_max[0],
-                temp_min: data.daily.temperature_2m_min[0],
-                humidity: null, // Not available in free historical API
-                pressure: null
-              },
-              weather: [{
-                main: getWeatherCondition(data.daily.weathercode[0])
-              }],
-              wind: {
-                speed: data.daily.windspeed_10m_max[0] || 0,
-                deg: null
-              },
-              precipitation: data.daily.precipitation_sum[0] || 0
-            };
-          } else {
-            throw new Error('No historical weather data available for this date');
-          }
-        } else if (apiKey) {
-          // Use OpenWeatherMap for current/future weather
-          const weatherUrl = `https://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&appid=${apiKey}&units=imperial`;
-        
-          const weatherResponse = await axios.get(weatherUrl);
-          weather = weatherResponse.data;
-        } else {
-          // No API key and not historical - use Open-Meteo current weather
-          const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,weathercode,relative_humidity_2m,wind_speed_10m,wind_direction_10m,surface_pressure&temperature_unit=fahrenheit&windspeed_unit=mph`;
-          
-          const weatherResponse = await axios.get(weatherUrl);
-          const data = weatherResponse.data;
-          
+        if (data.daily && data.daily.time && data.daily.time.length > 0) {
           weather = {
             main: {
-              temp: data.current.temperature_2m,
-              humidity: data.current.relative_humidity_2m,
-              pressure: data.current.surface_pressure
+              temp: (data.daily.temperature_2m_max[0] + data.daily.temperature_2m_min[0]) / 2,
+              temp_max: data.daily.temperature_2m_max[0],
+              temp_min: data.daily.temperature_2m_min[0],
+              humidity: null,
+              pressure: null
             },
-            weather: [{
-              main: getWeatherCondition(data.current.weathercode)
-            }],
-            wind: {
-              speed: data.current.wind_speed_10m || 0,
-              deg: data.current.wind_direction_10m
-            }
+            weather: [{ main: getWeatherCondition(data.daily.weathercode[0]) }],
+            wind: { speed: data.daily.windspeed_10m_max[0] || 0, deg: null },
+            precipitation: data.daily.precipitation_sum[0] || 0
           };
+        } else {
+          throw new Error('No historical weather data available for this date');
         }
-        
-        // Store weather data in database
-        const weatherData = {
-          temperature: weather.main.temp,
-          temperature_unit: 'fahrenheit',
-          conditions: weather.weather[0].main,
-          humidity: weather.main.humidity,
-          wind_speed: weather.wind?.speed || 0,
-          wind_direction: weather.wind?.deg ? `${weather.wind.deg}°` : null,
-          pressure: weather.main.pressure
+      } else if (apiKey) {
+        const weatherUrl = `https://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&appid=${apiKey}&units=imperial`;
+        const weatherResponse = await axios.get(weatherUrl);
+        const ow = weatherResponse.data;
+        weather = {
+          main: ow.main,
+          weather: ow.weather,
+          wind: ow.wind,
+          precipitation: ow.rain?.['1h'] ?? ow.rain?.['3h'] ?? null
         };
-        
-        const insertSql = `
-          INSERT INTO weather_data 
-          (outing_id, temperature, temperature_unit, conditions, humidity, wind_speed, wind_direction, pressure)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        `;
-        
-        db.query(insertSql, [
-          outingId,
-          weatherData.temperature,
-          weatherData.temperature_unit,
-          weatherData.conditions,
-          weatherData.humidity,
-          weatherData.wind_speed,
-          weatherData.wind_direction,
-          weatherData.pressure
-        ], (err, insertResult) => {
-          if (err) return res.status(500).json({ error: err.message });
-          
-          res.json({
-            weather_id: insertResult.insertId,
-            outing_id: parseInt(outingId),
-            ...weatherData,
-            fetched_at: new Date()
-          });
-        });
-      } catch (apiError) {
-        console.error('Weather API error:', apiError.message);
-        return res.status(500).json({ 
-          error: "Failed to fetch weather data", 
-          details: apiError.message 
-        });
+      } else {
+        const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,weathercode,relative_humidity_2m,wind_speed_10m,wind_direction_10m,surface_pressure&daily=temperature_2m_max,temperature_2m_min,precipitation_sum&temperature_unit=fahrenheit&windspeed_unit=mph&precipitation_unit=inch`;
+        const weatherResponse = await axios.get(weatherUrl);
+        const data = weatherResponse.data;
+        const daily = data.daily && data.daily.time && data.daily.time.length > 0 ? data.daily : null;
+        weather = {
+          main: {
+            temp: data.current.temperature_2m,
+            temp_max: daily ? daily.temperature_2m_max[0] : null,
+            temp_min: daily ? daily.temperature_2m_min[0] : null,
+            humidity: data.current.relative_humidity_2m,
+            pressure: data.current.surface_pressure
+          },
+          weather: [{ main: getWeatherCondition(data.current.weathercode) }],
+          wind: {
+            speed: data.current.wind_speed_10m || 0,
+            deg: data.current.wind_direction_10m
+          },
+          precipitation: daily && daily.precipitation_sum ? daily.precipitation_sum[0] : null
+        };
       }
-    });
-  });
-});
-
-// Get cached weather data for an outing
-app.get("/outings/:id/weather/cached", (req, res) => {
-  db.query("SELECT * FROM weather_data WHERE outing_id = ?", [req.params.id], (err, results) => {
-    if (err) return res.status(500).json({ error: err.message });
-    if (results.length === 0) return res.status(404).json({ error: "Weather data not found for this outing" });
-    res.json(results[0]);
-  });
-});
-
-// Delete cached weather data for an outing (to force refresh)
-app.delete("/outings/:id/weather", (req, res) => {
-  db.query("DELETE FROM weather_data WHERE outing_id = ?", [req.params.id], (err, result) => {
-    if (err) return res.status(500).json({ error: err.message });
-    if (result.affectedRows === 0) return res.status(404).json({ error: "Weather data not found" });
-    res.json({ message: "Weather data deleted" });
+      
+      const response = {
+        outing_id: parseInt(outingId),
+        temperature: weather.main.temp,
+        temperature_max: weather.main.temp_max ?? null,
+        temperature_min: weather.main.temp_min ?? null,
+        temperature_unit: 'fahrenheit',
+        conditions: weather.weather[0].main,
+        humidity: weather.main.humidity,
+        wind_speed: weather.wind?.speed || 0,
+        wind_direction: weather.wind?.deg != null ? `${weather.wind.deg}°` : null,
+        pressure: weather.main.pressure,
+        precipitation: weather.precipitation ?? null,
+        fetched_at: new Date()
+      };
+      res.json(response);
+    } catch (apiError) {
+      const details = apiError.response?.data?.reason || apiError.response?.data?.error || apiError.message;
+      console.error('Weather API error:', details);
+      res.status(500).json({
+        error: details ? String(details) : "Failed to fetch weather data",
+        details: String(details || "")
+      });
+    }
   });
 });
 

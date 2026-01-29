@@ -17,7 +17,7 @@ CREATE TABLE locations (
     location_id INT AUTO_INCREMENT PRIMARY KEY,
     location_name VARCHAR(255) NOT NULL,
     region VARCHAR(100),
-    pinpoint VARCHAR(255),    -- Maps URL or additional location info
+    pinpoint VARCHAR(255),    -- Coordinates (lat,lng) for weather
     latitude DECIMAL(10, 8),   -- GPS latitude for weather API
     longitude DECIMAL(11, 8),  -- GPS longitude for weather API
     is_secret BOOLEAN DEFAULT FALSE,
@@ -85,22 +85,6 @@ CREATE TABLE location_images (
     uploaded_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (location_id) REFERENCES locations(location_id),
     CHECK (image_url IS NOT NULL OR image_data IS NOT NULL)  -- At least one must be provided
-);
-
--- weather data cache for outings (fetched from external API).
-CREATE TABLE weather_data (
-    weather_id INT AUTO_INCREMENT PRIMARY KEY,
-    outing_id INT NOT NULL,
-    temperature DECIMAL(5, 2),      -- Temperature in preferred unit
-    temperature_unit VARCHAR(10),     -- 'celsius' or 'fahrenheit'
-    conditions VARCHAR(100),           -- e.g., 'Clear', 'Cloudy', 'Rain'
-    humidity INT,                      -- Percentage
-    wind_speed DECIMAL(5, 2),          -- Wind speed
-    wind_direction VARCHAR(10),        -- Wind direction
-    pressure DECIMAL(7, 2),            -- Atmospheric pressure
-    fetched_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (outing_id) REFERENCES outings(outing_id),
-    UNIQUE KEY unique_outing_weather (outing_id)  -- One weather record per outing
 );
 
 /* --------------------------------- Views: --------------------------------- */

@@ -97,13 +97,13 @@ function LocationView({ onBack }) {
         </div>
 
         <div className="form-group">
-          <label>Pinpoint (Maps URL or Address)</label>
+          <label>Coordinates (lat,lng)</label>
           <input
             type="text"
             name="pinpoint"
             value={formData.pinpoint}
             onChange={handleChange}
-            placeholder="Optional: Maps link or address"
+            placeholder="e.g. 45.5231,-122.6765"
           />
         </div>
 
@@ -179,7 +179,9 @@ function LocationBrowser() {
       fetchLocations()
     } catch (error) {
       console.error('Error deleting location:', error)
-      alert('Failed to delete location')
+      const errorMessage = error.response?.data?.error || error.response?.data?.details || error.message || 'Failed to delete location'
+      console.error('Error details:', error.response?.data)
+      alert(`Failed to delete location: ${errorMessage}`)
     }
   }
 
@@ -249,12 +251,13 @@ function LocationBrowser() {
                     />
                   </div>
                   <div className="form-group">
-                    <label>Pinpoint</label>
+                    <label>Coordinates (lat,lng)</label>
                     <input
                       type="text"
                       name="pinpoint"
                       value={editFormData.pinpoint}
                       onChange={handleEditChange}
+                      placeholder="e.g. 45.5231,-122.6765"
                     />
                   </div>
                   <div className="form-group checkbox-group">
@@ -297,13 +300,23 @@ function LocationBrowser() {
                     <h3>{location.location_name}</h3>
                     <div className="location-item-actions">
                       <button
-                        onClick={() => handleEdit(location)}
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          handleEdit(location)
+                        }}
                         className="edit-button"
                       >
                         Edit
                       </button>
                       <button
-                        onClick={() => handleDelete(location.location_id)}
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          handleDelete(location.location_id)
+                        }}
                         className="delete-button"
                       >
                         Delete
@@ -312,7 +325,7 @@ function LocationBrowser() {
                   </div>
                   <div className="location-item-details">
                     {location.region && <p><strong>Region:</strong> {location.region}</p>}
-                    {location.pinpoint && <p><strong>Pinpoint:</strong> {location.pinpoint}</p>}
+                    {location.pinpoint && <p><strong>Coordinates:</strong> {location.pinpoint}</p>}
                     {location.is_secret && <p><strong>Secret Spot:</strong> Yes</p>}
                     {location.lore && <p><strong>Lore:</strong> {location.lore}</p>}
                   </div>

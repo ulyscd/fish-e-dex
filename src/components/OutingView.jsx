@@ -322,6 +322,8 @@ function OutingBrowser() {
   const [editFormData, setEditFormData] = useState(null)
   const [catches, setCatches] = useState({})
   const [images, setImages] = useState({})
+  const [weather, setWeather] = useState({})
+  const [weatherLoading, setWeatherLoading] = useState({})
 
   useEffect(() => {
     fetchOutings()
@@ -400,7 +402,9 @@ function OutingBrowser() {
       }
     } catch (error) {
       console.error('Error deleting outing:', error)
-      alert('Failed to delete outing')
+      const errorMessage = error.response?.data?.error || error.response?.data?.details || error.message || 'Failed to delete outing'
+      console.error('Error details:', error.response?.data)
+      alert(`Failed to delete outing: ${errorMessage}`)
     }
   }
 
@@ -410,6 +414,17 @@ function OutingBrowser() {
       const response = await axios.get(`${API_BASE}/outings/${outing.outing_id}`)
       const fullOuting = response.data
       
+      // Fetch location data if location_id exists
+      let locationPinpoint = ''
+      if (fullOuting.location_id) {
+        try {
+          const locationResponse = await axios.get(`${API_BASE}/locations/${fullOuting.location_id}`)
+          locationPinpoint = locationResponse.data.pinpoint || ''
+        } catch (locError) {
+          console.error('Error fetching location:', locError)
+        }
+      }
+      
       setEditingId(outing.outing_id)
       setEditFormData({
         user_id: fullOuting.user_id || 1,
@@ -417,7 +432,8 @@ function OutingBrowser() {
         outing_date: fullOuting.outing_date ? new Date(fullOuting.outing_date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
         worth_returning: fullOuting.worth_returning === true || fullOuting.worth_returning === 1,
         field_notes: fullOuting.field_notes || '',
-        mvp_lure: fullOuting.mvp_lure || ''
+        mvp_lure: fullOuting.mvp_lure || '',
+        location_pinpoint: locationPinpoint
       })
       // Collapse if expanded
       if (expandedId === outing.outing_id) {
@@ -432,7 +448,30 @@ function OutingBrowser() {
   const handleEditSubmit = async (e) => {
     e.preventDefault()
     try {
+      // Update outing
       await axios.put(`${API_BASE}/outings/${editingId}`, editFormData)
+      
+      // Update location pinpoint if location_id exists and pinpoint was changed
+      if (editFormData.location_id && editFormData.location_pinpoint !== undefined) {
+        try {
+          // Fetch current location to get all fields
+          const locationResponse = await axios.get(`${API_BASE}/locations/${editFormData.location_id}`)
+          const currentLocation = locationResponse.data
+          
+          // Update location with new pinpoint
+          await axios.put(`${API_BASE}/locations/${editFormData.location_id}`, {
+            location_name: currentLocation.location_name,
+            region: currentLocation.region || '',
+            pinpoint: editFormData.location_pinpoint,
+            is_secret: currentLocation.is_secret || false,
+            lore: currentLocation.lore || ''
+          })
+        } catch (locError) {
+          console.error('Error updating location:', locError)
+          // Don't fail the whole operation if location update fails
+        }
+      }
+      
       setEditingId(null)
       setEditFormData(null)
       fetchOutings()
@@ -448,6 +487,20 @@ function OutingBrowser() {
       ...prev,
       [name]: type === 'checkbox' ? checked : value
     }))
+  }
+
+  const fetchWeather = async (outingId) => {
+    setWeatherLoading(prev => ({ ...prev, [outingId]: true }))
+    try {
+      const response = await axios.get(`${API_BASE}/outings/${outingId}/weather`)
+      setWeather(prev => ({ ...prev, [outingId]: response.data }))
+    } catch (error) {
+      console.error('Error fetching weather:', error)
+      const errorMessage = error.response?.data?.error || error.response?.data?.details || error.message || 'Failed to fetch weather'
+      alert(`Failed to fetch weather: ${errorMessage}`)
+    } finally {
+      setWeatherLoading(prev => ({ ...prev, [outingId]: false }))
+    }
   }
 
   if (loading) {
@@ -491,6 +544,21 @@ function OutingBrowser() {
                       </select>
                     </div>
                   </div>
+                  {editFormData.location_id && (
+                    <div className="form-group">
+                      <label>Coordinates (lat,lng)</label>
+                      <input
+                        type="text"
+                        name="location_pinpoint"
+                        value={editFormData.location_pinpoint || ''}
+                        onChange={handleEditChange}
+                        placeholder="e.g. 45.5231,-122.6765"
+                      />
+                      <small style={{ fontSize: '0.5rem', color: 'var(--beige-dark)', display: 'block', marginTop: '0.5rem' }}>
+                        Enter coordinates for this spot to enable weather fetching
+                      </small>
+                    </div>
+                  )}
                   <div className="form-group checkbox-group">
                     <label>
                       <input
@@ -551,7 +619,9 @@ function OutingBrowser() {
                     </div>
                     <div className="outing-item-actions">
                       <button
+                        type="button"
                         onClick={(e) => {
+                          e.preventDefault()
                           e.stopPropagation()
                           handleEdit(outing)
                         }}
@@ -560,7 +630,9 @@ function OutingBrowser() {
                         Edit
                       </button>
                       <button
+                        type="button"
                         onClick={(e) => {
+                          e.preventDefault()
                           e.stopPropagation()
                           handleDelete(outing.outing_id)
                         }}
@@ -583,6 +655,48 @@ function OutingBrowser() {
                     {outing.mvp_lure && (
                       <p><strong>MVP Lure:</strong> {outing.mvp_lure}</p>
                     )}
+                    
+                    <div className="weather-section">
+                      <div className="weather-header">
+                        <h4>Weather</h4>
+                        <button
+                          type="button"
+                          onClick={() => fetchWeather(outing.outing_id)}
+                          className="weather-button"
+                          disabled={weatherLoading[outing.outing_id]}
+                        >
+                          {weatherLoading[outing.outing_id] ? 'Loading...' : '🌤️ Fetch Weather'}
+                        </button>
+                      </div>
+                      {weather[outing.outing_id] && (
+                        <div className="weather-data">
+                          {weather[outing.outing_id].temperature != null && (
+                            <p><strong>Temperature:</strong> {weather[outing.outing_id].temperature}°{weather[outing.outing_id].temperature_unit === 'fahrenheit' ? 'F' : 'C'}</p>
+                          )}
+                          {(weather[outing.outing_id].temperature_max != null || weather[outing.outing_id].temperature_min != null) && (
+                            <p><strong>High / Low:</strong> {weather[outing.outing_id].temperature_max != null ? `${weather[outing.outing_id].temperature_max}°` : '—'} / {weather[outing.outing_id].temperature_min != null ? `${weather[outing.outing_id].temperature_min}°` : '—'}{weather[outing.outing_id].temperature_unit === 'fahrenheit' ? 'F' : 'C'}</p>
+                          )}
+                          {weather[outing.outing_id].conditions && (
+                            <p><strong>Conditions:</strong> {weather[outing.outing_id].conditions}</p>
+                          )}
+                          {weather[outing.outing_id].humidity !== null && weather[outing.outing_id].humidity !== undefined && (
+                            <p><strong>Humidity:</strong> {weather[outing.outing_id].humidity}%</p>
+                          )}
+                          {weather[outing.outing_id].wind_speed != null && weather[outing.outing_id].wind_speed !== '' && (
+                            <p><strong>Wind Speed:</strong> {weather[outing.outing_id].wind_speed} mph</p>
+                          )}
+                          {weather[outing.outing_id].wind_direction && (
+                            <p><strong>Wind Direction:</strong> {weather[outing.outing_id].wind_direction}</p>
+                          )}
+                          {weather[outing.outing_id].pressure != null && (
+                            <p><strong>Pressure:</strong> {weather[outing.outing_id].pressure} hPa</p>
+                          )}
+                          {weather[outing.outing_id].precipitation != null && weather[outing.outing_id].precipitation !== '' && (
+                            <p><strong>Precipitation:</strong> {weather[outing.outing_id].precipitation} in</p>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   {catches[outing.outing_id] && catches[outing.outing_id].length > 0 && (

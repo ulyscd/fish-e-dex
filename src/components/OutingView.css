@@ -427,6 +427,66 @@
   letter-spacing: 1px;
 }
 
+.weather-section {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 2px solid var(--beige-dark);
+}
+
+.weather-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.weather-header h4 {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin: 0;
+}
+
+.weather-button {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: var(--matcha-light);
+  border: 2px solid var(--matcha);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: var(--text-dark);
+}
+
+.weather-button:hover:not(:disabled) {
+  background: var(--matcha);
+  transform: translateY(-2px);
+}
+
+.weather-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.weather-data {
+  background: var(--beige-light);
+  padding: 1rem;
+  border-radius: 4px;
+  border: 2px solid var(--beige-dark);
+  margin-top: 1rem;
+}
+
+.weather-data p {
+  margin: 0.5rem 0;
+  font-size: 0.6rem;
+}
+
+.weather-data strong {
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
 .outing-catches {
   margin-bottom: 1.5rem;
 }
