@@ -4,7 +4,9 @@ import './InsightsView.css'
 
 const API_BASE = '/api'
 
+/* --------------- InsightsView --------------- */
 function InsightsView({ onBack }) {
+  // Table data: fish_caught view + best_spots procedure per species
   const [fishCaught, setFishCaught] = useState([])
   const [bestSpots, setBestSpots] = useState([])
   const [selectedSpecies, setSelectedSpecies] = useState('Rainbow Trout')
@@ -34,6 +36,7 @@ function InsightsView({ onBack }) {
 
   return (
     <div className="insights-view">
+      {/* Top bar: back (returns to main menu) + title */}
       <div className="view-header">
         <button className="back-button" onClick={onBack}>
           <img src="/media/bluearth.gif" alt="Back" className="back-gif" />
@@ -45,6 +48,7 @@ function InsightsView({ onBack }) {
         <div className="loading">Loading...</div>
       ) : (
         <div className="insights-content">
+          {/* First card: location × species × total (from fish_caught view) */}
           <div className="insight-section">
             <h3>Total Fish Caught by Location</h3>
             <div className="data-table">
@@ -69,6 +73,7 @@ function InsightsView({ onBack }) {
             </div>
           </div>
 
+          {/* Second card: species dropdown drives best_spots; table shows top locations */}
           <div className="insight-section">
             <h3>Best Spots by Species</h3>
             <div className="species-selector">
@@ -111,4 +116,5 @@ function InsightsView({ onBack }) {
   )
 }
 
+/* --------------- Export --------------- */
 export default InsightsView

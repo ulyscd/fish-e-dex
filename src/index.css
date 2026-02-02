@@ -1,3 +1,4 @@
+/* --------------- Fish-e-dex global styles --------------- */
 /*
 
 ███████╗██╗░██████╗██╗░░██╗░░░░░░███████╗░░░░░░██████╗░███████╗██╗░░██╗
@@ -10,6 +11,7 @@
 
 @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
 
+/* --------------- CSS variables --------------- */
 :root {
   --off-white: #FAF9F6;
   --beige-light: #F5F5F0;
@@ -24,12 +26,14 @@
   --shadow-hover: rgba(0, 0, 0, 0.12);
 }
 
+/* --------------- Reset & base --------------- */
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 
+/* --------------- Body & root --------------- */
 body {
   font-family: 'Press Start 2P', monospace;
   background: var(--matcha-dark);

@@ -7,11 +7,11 @@ import OutingView from './components/OutingView'
 import InsightsView from './components/InsightsView'
 import './App.css'
 
+/* --------------- App (root component) --------------- */
 function App() {
   const [currentView, setCurrentView] = useState('welcome') // 'welcome', 'main', 'location', 'outing', 'insights'
-  const [selectedGif, setSelectedGif] = useState(0) // 0: spiral, 1: notes, 2: code
+  const [selectedGif, setSelectedGif] = useState(0) // 0: Location, 1: Outing, 2: Insights (matches main menu gifs)
 
-  // Handle keyboard navigation
   useEffect(() => {
     const handleKeyPress = (e) => {
       if (currentView === 'welcome') {
@@ -41,6 +41,7 @@ function App() {
     return () => window.removeEventListener('keydown', handleKeyPress)
   }, [currentView, selectedGif])
 
+  {/* HandheldFrame wraps all views; title at bottom returns to welcome */}
   return (
     <div className="app">
       <HandheldFrame onTitleClick={() => setCurrentView('welcome')}>
@@ -68,4 +69,5 @@ function App() {
   )
 }
 
+/* --------------- Export --------------- */
 export default App

@@ -1,3 +1,6 @@
+/* --------------- HandheldFrame --------------- */
+
+/* --------------- Frame & border --------------- */
 .handheld-frame {
   position: fixed;
   top: 0;
@@ -76,6 +79,7 @@
     0 0 15px rgba(0, 0, 0, 0.5);
 }
 
+/* --------------- Screen container --------------- */
 .screen-container {
   flex: 1;
   background: var(--text-dark);
@@ -191,7 +195,7 @@
   z-index: 2;
 }
 
-/* Responsive adjustments */
+/* --------------- Responsive --------------- */
 @media (max-width: 768px) {
   .handheld-frame {
     padding: 25px;

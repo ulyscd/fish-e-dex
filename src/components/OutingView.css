@@ -1,3 +1,6 @@
+/* --------------- OutingView --------------- */
+
+/* --------------- Root / layout --------------- */
 .outing-view {
   width: 100%;
   height: 100%;
@@ -59,6 +62,7 @@
   50% { opacity: 0.98; }
 }
 
+/* --------------- View header & tabs --------------- */
 .view-header {
   display: flex;
   align-items: center;

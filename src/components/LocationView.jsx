@@ -3,8 +3,10 @@ import axios from 'axios'
 import Popup from './Popup'
 import './LocationView.css'
 
+/* --------------- Constants --------------- */
 const API_BASE = '/api'
 
+/* --------------- LocationView (main) --------------- */
 function LocationView({ onBack }) {
   const [activeTab, setActiveTab] = useState('log') // 'log' or 'browse'
   const [formData, setFormData] = useState({
@@ -49,6 +51,7 @@ function LocationView({ onBack }) {
 
   return (
     <div className="location-view">
+      {/* Header: back to main menu + "Locations" title */}
       <div className="view-header">
         <button className="back-button" onClick={onBack}>
           <img src="/media/bluearth.gif" alt="Back" className="back-gif" />
@@ -56,6 +59,7 @@ function LocationView({ onBack }) {
         <h2>Locations</h2>
       </div>
 
+      {/* Tabs: Log (new spot form) vs Browse (list/edit/delete) */}
       <div className="tab-container">
         <button
           className={`tab-button ${activeTab === 'log' ? 'active' : ''}`}
@@ -96,6 +100,7 @@ function LocationView({ onBack }) {
           />
         </div>
 
+        {/* Coordinates stored for weather; user pastes from Maps */}
         <div className="form-group">
           <label>Coordinates (lat,lng)</label>
           <input
@@ -140,6 +145,7 @@ function LocationView({ onBack }) {
         <LocationBrowser />
       )}
 
+      {/* Success overlay: kakashi gif + "Location saved!" */}
       {showSuccess && (
         <Popup onClose={() => setShowSuccess(false)}>
           <img src="/media/kakashifish.gif" alt="Success" className="success-gif" />
@@ -150,6 +156,7 @@ function LocationView({ onBack }) {
   )
 }
 
+/* --------------- LocationBrowser (sub-component) --------------- */
 function LocationBrowser() {
   const [locations, setLocations] = useState([])
   const [loading, setLoading] = useState(true)
@@ -229,6 +236,7 @@ function LocationBrowser() {
         <div className="location-list">
           {locations.map(location => (
             <div key={location.location_id} className="location-item">
+              {/* Inline edit: same card flips to form with Save/Cancel */}
               {editingId === location.location_id ? (
                 <form className="edit-form" onSubmit={handleEditSubmit}>
                   <div className="form-group">
@@ -339,4 +347,5 @@ function LocationBrowser() {
   )
 }
 
+/* --------------- Export --------------- */
 export default LocationView

@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import './Popup.css'
 
+/* --------------- Popup --------------- */
 function Popup({ children, onClose }) {
   useEffect(() => {
     const handleEscape = (e) => {
@@ -12,6 +13,7 @@ function Popup({ children, onClose }) {
     return () => window.removeEventListener('keydown', handleEscape)
   }, [onClose])
 
+  // Overlay click closes; content stopPropagation keeps inner clicks from closing. Escape key also closes.
   return (
     <div className="popup-overlay" onClick={onClose}>
       <div className="popup-content" onClick={(e) => e.stopPropagation()}>
@@ -22,4 +24,5 @@ function Popup({ children, onClose }) {
   )
 }
 
+/* --------------- Export --------------- */
 export default Popup

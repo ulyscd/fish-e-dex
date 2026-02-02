@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react'
 import './WelcomeScreen.css'
 
+/* --------------- WelcomeScreen --------------- */
 function WelcomeScreen({ onStart }) {
   const [isReady, setIsReady] = useState(false)
 
   useEffect(() => {
-    // Small delay for animation
     const timer = setTimeout(() => setIsReady(true), 500)
     return () => clearTimeout(timer)
   }, [])
@@ -47,4 +47,5 @@ function WelcomeScreen({ onStart }) {
   )
 }
 
+/* --------------- Export --------------- */
 export default WelcomeScreen

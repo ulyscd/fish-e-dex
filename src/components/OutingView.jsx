@@ -3,8 +3,10 @@ import axios from 'axios'
 import Popup from './Popup'
 import './OutingView.css'
 
+/* --------------- Constants --------------- */
 const API_BASE = '/api'
 
+/* --------------- OutingView (main) --------------- */
 function OutingView({ onBack }) {
   const [activeTab, setActiveTab] = useState('log') // 'log' or 'browse'
   const [locations, setLocations] = useState([])
@@ -163,6 +165,7 @@ function OutingView({ onBack }) {
 
   return (
     <div className="outing-view">
+      {/* Top bar: back to main menu + "Outings" title */}
       <div className="view-header">
         <button className="back-button" onClick={onBack}>
           <img src="/media/bluearth.gif" alt="Back" className="back-gif" />
@@ -170,6 +173,7 @@ function OutingView({ onBack }) {
         <h2>Outings</h2>
       </div>
 
+      {/* Tabs: Log (new outing + catches + pending photos) vs Browse (list/expand/edit) */}
       <div className="tab-container">
         <button
           className={`tab-button ${activeTab === 'log' ? 'active' : ''}`}
@@ -250,6 +254,7 @@ function OutingView({ onBack }) {
           />
         </div>
 
+        {/* Optional: reveal catch rows; "I didn't catch anything" hides section */}
         {!showCatches && (
           <div className="caught-something-section">
             <button 
@@ -308,6 +313,7 @@ function OutingView({ onBack }) {
                   placeholder="Catch notes..."
                 />
               </div>
+              {/* Pending photos uploaded with outing on Save; count shown on button */}
               <div className="catch-actions">
                 <button
                   type="button"
@@ -366,6 +372,7 @@ function OutingView({ onBack }) {
         />
       )}
 
+      {/* Success overlay: champloo gif + "Outing saved!" */}
       {showSuccess && (
         <Popup onClose={() => setShowSuccess(false)}>
           <img src="/media/champloo.gif" alt="Success" className="success-gif" />
@@ -376,6 +383,7 @@ function OutingView({ onBack }) {
   )
 }
 
+/* --------------- OutingBrowser (sub-component) --------------- */
 function OutingBrowser() {
   const [outings, setOutings] = useState([])
   const [locations, setLocations] = useState([])
@@ -607,6 +615,7 @@ function OutingBrowser() {
                       </select>
                     </div>
                   </div>
+                  {/* Location coords: used for weather fetch when expanding outing */}
                   {editFormData.location_id && (
                     <div className="form-group">
                       <label>Coordinates (lat,lng)</label>
@@ -719,6 +728,7 @@ function OutingBrowser() {
                       <p><strong>MVP Lure:</strong> {outing.mvp_lure}</p>
                     )}
                     
+                    {/* Weather: on-demand from location coords + outing date; not stored in DB */}
                     <div className="weather-section">
                       <div className="weather-header">
                         <h4>Weather</h4>
@@ -762,6 +772,7 @@ function OutingBrowser() {
                     </div>
                   </div>
 
+                  {/* Catches list: species, count, notes (from API) */}
                   {catches[outing.outing_id] && catches[outing.outing_id].length > 0 && (
                     <div className="outing-catches">
                       <h4>Catches</h4>
@@ -776,6 +787,7 @@ function OutingBrowser() {
                     </div>
                   )}
 
+                  {/* Scenery + catch photos: served from /file (DB or MinIO) */}
                   {images[outing.outing_id] && (
                     <div className="outing-images">
                       {images[outing.outing_id].scenery && images[outing.outing_id].scenery.length > 0 && (
@@ -835,6 +847,7 @@ function OutingBrowser() {
   )
 }
 
+/* --------------- ImageUploadPopup (sub-component) --------------- */
 function ImageUploadPopup({ onClose, catchIndex, catchId, catchLocalId, onSavePending }) {
   const [file, setFile] = useState(null)
   const [preview, setPreview] = useState(null)
@@ -960,4 +973,5 @@ function ImageUploadPopup({ onClose, catchIndex, catchId, catchLocalId, onSavePe
   )
 }
 
+/* --------------- Export --------------- */
 export default OutingView

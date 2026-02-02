@@ -1,6 +1,8 @@
 import './HandheldFrame.css'
 
+/* --------------- HandheldFrame --------------- */
 function HandheldFrame({ children, onTitleClick }) {
+  // Tube border: decorative frame; frame-embossed: title at bottom, click returns to welcome; screen: main content area
   return (
     <div className="handheld-frame">
       <div className="tube-border"></div>
@@ -14,4 +16,5 @@ function HandheldFrame({ children, onTitleClick }) {
   )
 }
 
+/* --------------- Export --------------- */
 export default HandheldFrame

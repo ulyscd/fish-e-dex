@@ -1,3 +1,6 @@
+/* --------------- Popup --------------- */
+
+/* --------------- Overlay & content --------------- */
 .popup-overlay {
   position: fixed;
   top: 0;
@@ -48,6 +51,7 @@
   transform: scale(1.2);
 }
 
+/* --------------- Content typography --------------- */
 .popup-content p {
   font-size: 0.8rem;
   color: var(--text-dark);

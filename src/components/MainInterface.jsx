@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import './MainInterface.css'
 
+/* --------------- MainInterface --------------- */
 function MainInterface({ selectedGif, onGifSelect, onNavigate }) {
   const gifs = [
     { src: '/media/spiral.gif', view: 'location', label: 'Location' },
@@ -21,6 +22,7 @@ function MainInterface({ selectedGif, onGifSelect, onNavigate }) {
         style={{ backgroundImage: 'url(/media/carp.jpg)' }}
       ></div>
       <div className="main-content">
+        {/* Three options: click or Enter opens Location / Outing / Insights */}
         <div className="gif-selector">
           {gifs.map((gif, index) => (
             <div
@@ -46,4 +48,5 @@ function MainInterface({ selectedGif, onGifSelect, onNavigate }) {
   )
 }
 
+/* --------------- Export --------------- */
 export default MainInterface
