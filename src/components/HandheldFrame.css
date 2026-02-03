@@ -197,7 +197,7 @@
   position: relative;
   overflow: hidden;
   z-index: 2;
-  padding: 20px;
+  padding: 0;
   box-sizing: border-box;
 }
 
@@ -217,6 +217,6 @@
   }
 
   .screen {
-    padding: 12px;
+    padding: 0;
   }
 }
