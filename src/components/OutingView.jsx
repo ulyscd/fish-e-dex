@@ -305,7 +305,7 @@ function OutingView({ onBack }) {
                 </div>
               </div>
               <div className="form-group">
-                <label>Notes</label>
+                <label> </label>
                 <input
                   type="text"
                   value={catchItem.notes}

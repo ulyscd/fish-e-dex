@@ -52,7 +52,7 @@
 
 .frame-embossed {
   position: absolute;
-  bottom: 40px;
+  bottom: 33px;
   left: 50%;
   transform: translateX(-50%);
   font-size: 0.7rem;
