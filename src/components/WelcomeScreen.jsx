@@ -35,13 +35,13 @@ function WelcomeScreen({ onStart }) {
 ██║░░░░░██║██████╔╝██║░░██║░░░░░░███████╗░░░░░░██████╔╝███████╗██╔╝╚██╗
 ╚═╝░░░░░╚═╝╚═════╝░╚═╝░░╚═╝░░░░░░╚══════╝░░░░░░╚═════╝░╚══════╝╚═╝░░╚═╝`}
           </pre>
+          <div className="copyright">© 2026 u!ys</div>
         </div>
         {isReady && (
           <div className="press-start">
             <span className="cursor">&gt;</span> press start
           </div>
         )}
-        <div className="copyright">© 2026 u!ys</div>
       </div>
     </div>
   )
