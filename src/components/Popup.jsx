@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import './Popup.css'
+import './styles/Popup.css'
 
 /* --------------- Popup --------------- */
 function Popup({ children, onClose }) {

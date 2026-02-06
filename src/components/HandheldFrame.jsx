@@ -1,4 +1,4 @@
-import './HandheldFrame.css'
+import './styles/HandheldFrame.css'
 
 /* --------------- HandheldFrame --------------- */
 function HandheldFrame({ children, onTitleClick }) {

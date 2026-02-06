@@ -17,6 +17,24 @@
   overflow: hidden;
 }
 
+.welcome-login-button {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  z-index: 10;
+  padding: 0.5rem 1rem;
+  font-size: 0.7rem;
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid var(--beige-dark);
+  color: var(--beige);
+  cursor: pointer;
+}
+
+.welcome-login-button:hover {
+  background: rgba(0, 0, 0, 0.8);
+  border-color: var(--beige);
+}
+
 .welcome-screen::after {
   content: '';
   position: fixed;

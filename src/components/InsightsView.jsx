@@ -1,12 +1,8 @@
 import { useState, useEffect } from 'react'
-import axios from 'axios'
-import './InsightsView.css'
+import { supabase } from '../lib/supabase'
+import './styles/InsightsView.css'
 
-const API_BASE = '/api'
-
-/* --------------- InsightsView --------------- */
 function InsightsView({ onBack }) {
-  // Table data: fish_caught view + best_spots procedure per species
   const [fishCaught, setFishCaught] = useState([])
   const [bestSpots, setBestSpots] = useState([])
   const [selectedSpecies, setSelectedSpecies] = useState('Rainbow Trout')
@@ -19,12 +15,12 @@ function InsightsView({ onBack }) {
   const fetchData = async () => {
     setLoading(true)
     try {
-      const [fishResponse, spotsResponse] = await Promise.all([
-        axios.get(`${API_BASE}/fish_caught`),
-        axios.get(`${API_BASE}/best_spots?species=${encodeURIComponent(selectedSpecies)}`)
+      const [fishRes, spotsRes] = await Promise.all([
+        supabase.from('fish_caught').select('*'),
+        supabase.rpc('bestspot_by_species', { target_species: selectedSpecies })
       ])
-      setFishCaught(fishResponse.data)
-      setBestSpots(spotsResponse.data)
+      setFishCaught(fishRes.data || [])
+      setBestSpots(Array.isArray(spotsRes.data) ? spotsRes.data : [])
     } catch (error) {
       console.error('Error fetching insights:', error)
     } finally {
@@ -36,7 +32,6 @@ function InsightsView({ onBack }) {
 
   return (
     <div className="insights-view">
-      {/* Top bar: back (returns to main menu) + title */}
       <div className="view-header">
         <button className="back-button" onClick={onBack}>
           <img src="/media/bluearth.gif" alt="Back" className="back-gif" />
@@ -48,7 +43,6 @@ function InsightsView({ onBack }) {
         <div className="loading">Loading...</div>
       ) : (
         <div className="insights-content">
-          {/* First card: location × species × total (from fish_caught view) */}
           <div className="insight-section">
             <h3>Total Fish Caught by Location</h3>
             <div className="data-table">
@@ -73,15 +67,11 @@ function InsightsView({ onBack }) {
             </div>
           </div>
 
-          {/* Second card: species dropdown drives best_spots; table shows top locations */}
           <div className="insight-section">
             <h3>Best Spots by Species</h3>
             <div className="species-selector">
               <label>Species:</label>
-              <select
-                value={selectedSpecies}
-                onChange={(e) => setSelectedSpecies(e.target.value)}
-              >
+              <select value={selectedSpecies} onChange={(e) => setSelectedSpecies(e.target.value)}>
                 {uniqueSpecies.length > 0 ? (
                   uniqueSpecies.map(species => (
                     <option key={species} value={species}>{species}</option>
@@ -116,5 +106,4 @@ function InsightsView({ onBack }) {
   )
 }
 
-/* --------------- Export --------------- */
 export default InsightsView

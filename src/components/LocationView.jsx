@@ -1,14 +1,13 @@
 import { useState, useEffect } from 'react'
-import axios from 'axios'
+import { useAuth } from '../contexts/AuthContext'
+import { supabase } from '../lib/supabase'
 import Popup from './Popup'
-import './LocationView.css'
-
-/* --------------- Constants --------------- */
-const API_BASE = '/api'
+import './styles/LocationView.css'
 
 /* --------------- LocationView (main) --------------- */
 function LocationView({ onBack }) {
-  const [activeTab, setActiveTab] = useState('log') // 'log' or 'browse'
+  const { user } = useAuth()
+  const [activeTab, setActiveTab] = useState('log')
   const [formData, setFormData] = useState({
     location_name: '',
     region: '',
@@ -21,10 +20,17 @@ function LocationView({ onBack }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    if (!user) {
+      alert('Please log in to save locations.')
+      return
+    }
     setLoading(true)
-
     try {
-      await axios.post(`${API_BASE}/location`, formData)
+      const { error } = await supabase.from('locations').insert({
+        ...formData,
+        user_id: user.id
+      })
+      if (error) throw error
       setShowSuccess(true)
       setFormData({
         location_name: '',
@@ -35,7 +41,7 @@ function LocationView({ onBack }) {
       })
     } catch (error) {
       console.error('Error creating location:', error)
-      alert('Failed to create location: ' + (error.response?.data?.error || error.message))
+      alert('Failed to create location: ' + (error.message || 'Unknown error'))
     } finally {
       setLoading(false)
     }
@@ -51,7 +57,6 @@ function LocationView({ onBack }) {
 
   return (
     <div className="location-view">
-      {/* Header: back to main menu + "Locations" title */}
       <div className="view-header">
         <button className="back-button" onClick={onBack}>
           <img src="/media/bluearth.gif" alt="Back" className="back-gif" />
@@ -59,7 +64,6 @@ function LocationView({ onBack }) {
         <h2>Locations</h2>
       </div>
 
-      {/* Tabs: Log (new spot form) vs Browse (list/edit/delete) */}
       <div className="tab-container">
         <button
           className={`tab-button ${activeTab === 'log' ? 'active' : ''}`}
@@ -85,7 +89,7 @@ function LocationView({ onBack }) {
             value={formData.location_name}
             onChange={handleChange}
             required
-            placeholder="Bunch Bar"
+            placeholder="New Honey Hole"
           />
         </div>
 
@@ -96,11 +100,10 @@ function LocationView({ onBack }) {
             name="region"
             value={formData.region}
             onChange={handleChange}
-            placeholder="Elkton, OR"
+            placeholder="City, State, Area..."
           />
         </div>
 
-        {/* Coordinates stored for weather; user pastes from Maps */}
         <div className="form-group">
           <label>Coordinates (lat,lng)</label>
           <input
@@ -108,7 +111,7 @@ function LocationView({ onBack }) {
             name="pinpoint"
             value={formData.pinpoint}
             onChange={handleChange}
-            placeholder="e.g. 45.5231,-122.6765"
+            placeholder="Hint: Copy from Google Maps"
           />
         </div>
 
@@ -131,7 +134,7 @@ function LocationView({ onBack }) {
             value={formData.lore}
             onChange={handleChange}
             rows="4"
-            placeholder="Chrome come in heavy start of Nov..."
+            placeholder="Make sure to stop at the naturist hot spring..."
           />
         </div>
 
@@ -145,7 +148,6 @@ function LocationView({ onBack }) {
         <LocationBrowser />
       )}
 
-      {/* Success overlay: kakashi gif + "Location saved!" */}
       {showSuccess && (
         <Popup onClose={() => setShowSuccess(false)}>
           <img src="/media/kakashifish.gif" alt="Success" className="success-gif" />
@@ -156,7 +158,7 @@ function LocationView({ onBack }) {
   )
 }
 
-/* --------------- LocationBrowser (sub-component) --------------- */
+/* --------------- LocationBrowser --------------- */
 function LocationBrowser() {
   const [locations, setLocations] = useState([])
   const [loading, setLoading] = useState(true)
@@ -169,8 +171,9 @@ function LocationBrowser() {
 
   const fetchLocations = async () => {
     try {
-      const response = await axios.get(`${API_BASE}/locations`)
-      setLocations(response.data)
+      const { data, error } = await supabase.from('locations').select('*')
+      if (error) throw error
+      setLocations(data || [])
     } catch (error) {
       console.error('Error fetching locations:', error)
     } finally {
@@ -180,15 +183,13 @@ function LocationBrowser() {
 
   const handleDelete = async (id) => {
     if (!confirm('Are you sure you want to delete this location?')) return
-    
     try {
-      await axios.delete(`${API_BASE}/locations/${id}`)
+      const { error } = await supabase.from('locations').delete().eq('location_id', id)
+      if (error) throw error
       fetchLocations()
     } catch (error) {
       console.error('Error deleting location:', error)
-      const errorMessage = error.response?.data?.error || error.response?.data?.details || error.message || 'Failed to delete location'
-      console.error('Error details:', error.response?.data)
-      alert(`Failed to delete location: ${errorMessage}`)
+      alert(`Failed to delete location: ${error.message}`)
     }
   }
 
@@ -206,7 +207,11 @@ function LocationBrowser() {
   const handleEditSubmit = async (e) => {
     e.preventDefault()
     try {
-      await axios.put(`${API_BASE}/locations/${editingId}`, editFormData)
+      const { error } = await supabase
+        .from('locations')
+        .update(editFormData)
+        .eq('location_id', editingId)
+      if (error) throw error
       setEditingId(null)
       setEditFormData(null)
       fetchLocations()
@@ -236,7 +241,6 @@ function LocationBrowser() {
         <div className="location-list">
           {locations.map(location => (
             <div key={location.location_id} className="location-item">
-              {/* Inline edit: same card flips to form with Save/Cancel */}
               {editingId === location.location_id ? (
                 <form className="edit-form" onSubmit={handleEditSubmit}>
                   <div className="form-group">
@@ -307,28 +311,8 @@ function LocationBrowser() {
                   <div className="location-item-header">
                     <h3>{location.location_name}</h3>
                     <div className="location-item-actions">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.preventDefault()
-                          e.stopPropagation()
-                          handleEdit(location)
-                        }}
-                        className="edit-button"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.preventDefault()
-                          e.stopPropagation()
-                          handleDelete(location.location_id)
-                        }}
-                        className="delete-button"
-                      >
-                        Delete
-                      </button>
+                      <button type="button" onClick={() => handleEdit(location)} className="edit-button">Edit</button>
+                      <button type="button" onClick={() => handleDelete(location.location_id)} className="delete-button">Delete</button>
                     </div>
                   </div>
                   <div className="location-item-details">
@@ -347,5 +331,4 @@ function LocationBrowser() {
   )
 }
 
-/* --------------- Export --------------- */
 export default LocationView

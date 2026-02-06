@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import './MainInterface.css'
+import './styles/MainInterface.css'
 
 /* --------------- MainInterface --------------- */
 function MainInterface({ selectedGif, onGifSelect, onNavigate }) {

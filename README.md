@@ -2,7 +2,7 @@
 █▀▀ █ █▀ █░█ ▄▄ █▀▀ ▄▄ █▀▄ █▀▀ ▀▄▀
 █▀░ █ ▄█ █▀█ ░░ ██▄ ░░ █▄▀ ██▄ █░█
 
-A Poke-e-dex Fishing Journal Web App built in React.
+A Poke-e-dex inspired Fishing Journal Web App built in React.
 
 ## Features
 
@@ -13,7 +13,7 @@ A Poke-e-dex Fishing Journal Web App built in React.
 - Mark locations as secret spots
 
 ### Outing Management
-- Log fishing outings with date, location, field notes, and MVP lure
+- Log fishing outings with date, location, field notes, and best lure
 - Track multiple catches per outing (species, count, notes)
 - Browse all outings sorted by most recent
 - Expand outings to view full details, catches, and attached photos
@@ -36,11 +36,10 @@ A Poke-e-dex Fishing Journal Web App built in React.
 
 ## Tech Stack
 - Frontend: React, Vite
-- Backend: Node.js, Express
-- Database: MySQL
+- Database & Auth: Supabase (PostgreSQL, Auth, Storage)
 - Styling: CSS with custom retro animations
 
-## Setup
+## Setup (For Your Own Personal DB)
 
 1. Install dependencies:
    ```bash
@@ -49,25 +48,15 @@ A Poke-e-dex Fishing Journal Web App built in React.
 
 2. Configure environment variables in `.env`:
    ```
-   DB_HOST=localhost
-   DB_USER=your_username
-   DB_PASSWORD=your_password
-   DB_NAME=fishedex
-   OPENWEATHER_API_KEY=your_key (optional)
+   VITE_SUPABASE_URL=https://your-project.supabase.co
+   VITE_SUPABASE_ANON_KEY=your_anon_key
    ```
 
-3. Set up the database:
-   ```bash
-   mysql -u your_username -p < db/schema.sql
-   mysql -u your_username -p < db/seed.sql
-   ```
+3. Set up the Supabase database (run in Supabase SQL Editor):
+   - Create tables using `db/schema.supabase.sql` or migration scripts in `db/`
+   - Create RLS policies using `db/policies.sql`
 
-4. Start the server:
-   ```bash
-   node server.js
-   ```
-
-5. Start the development server (in a separate terminal):
+4. Start the development server:
    ```bash
    npm run dev
    ```
