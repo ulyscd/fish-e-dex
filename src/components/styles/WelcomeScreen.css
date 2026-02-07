@@ -153,6 +153,21 @@
     0 0 50px rgba(0, 0, 0, 0.4);
 }
 
+.welcome-title-img {
+  max-width: 90vw;
+  max-height: 40vh;
+  width: auto;
+  height: auto;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  filter: drop-shadow(3px 3px 6px rgba(0, 0, 0, 0.8));
+  transition: transform 0.3s ease;
+}
+
+.welcome-title:hover .welcome-title-img {
+  transform: scale(1.02);
+}
+
 .press-start {
   position: absolute;
   bottom: 2.5rem;
@@ -203,6 +218,10 @@
 @media (max-width: 768px) {
   .welcome-screen {
     padding: 1rem;
+  }
+  
+  .welcome-title-img {
+    max-height: 30vh;
   }
   
   .ascii-title {

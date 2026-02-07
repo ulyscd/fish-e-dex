@@ -52,10 +52,10 @@
 
 .frame-embossed {
   position: absolute;
-  bottom: 33px;
-  left: 50%;
+  bottom: 26px;
+  left: 58%;
   transform: translateX(-50%);
-  font-size: 0.7rem;
+  font-size: 0.3rem;
   color: var(--beige-dark);
   text-transform: uppercase;
   letter-spacing: 3px;
